@@ -1,0 +1,26 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "current",
+            "displayName": "VS2022 x64 Vulkan + Tracy",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/out/build/current",
+            "cacheVariables": {
+                "GODOT_SPOUT_ENABLE_VULKAN": "ON",
+                "GODOT_SPOUT_ENABLE_TRACY": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "current",
+            "configurePreset": "current",
+            "configuration": "RelWithDebInfo",
+            "targets": [
+                "install"
+            ]
+        }
+    ]
+}

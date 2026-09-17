@@ -2,6 +2,7 @@
 
 #include "SpoutBackend.hpp"
 #include "SpoutBackendFactory.hpp"
+#include "SpoutTracy.hpp"
 
 #include <godot_cpp/classes/rd_texture_format.hpp>
 #include <godot_cpp/classes/rd_texture_view.hpp>
@@ -12,6 +13,15 @@
 #include <godot_cpp/godot.hpp>
 
 using namespace godot;
+
+#if defined(GODOT_SPOUT_ENABLE_TRACY)
+namespace {
+uint64_t receive_failures = 0;
+uint64_t update_receiver_failures = 0;
+uint64_t receiver_recreates = 0;
+uint64_t texture_recreates = 0;
+} // namespace
+#endif
 
 void SpoutInput::_bind_methods() {
 
@@ -78,6 +88,8 @@ bool SpoutInput::_is_initialized() const {
 }
 
 bool SpoutInput::_create_receiver() {
+  SPOUT_TRACY_ZONE("SpoutInput::create_receiver");
+  SPOUT_TRACY_EVENT("SpoutInput/receiver_recreates", receiver_recreates);
 
   _release_receiver();
 
@@ -98,6 +110,7 @@ bool SpoutInput::_create_receiver() {
 }
 
 void SpoutInput::_release_receiver() {
+  SPOUT_TRACY_ZONE("SpoutInput::release_receiver");
 
   if (_backend) {
     _backend->release();
@@ -107,6 +120,10 @@ void SpoutInput::_release_receiver() {
 }
 
 bool SpoutInput::_create_texture(uint32_t p_width, uint32_t p_height) {
+  SPOUT_TRACY_ZONE("SpoutInput::create_texture");
+  SPOUT_TRACY_VALUE(p_width);
+  SPOUT_TRACY_VALUE(p_height);
+  SPOUT_TRACY_EVENT("SpoutInput/texture_recreates", texture_recreates);
 
   auto rd = RenderingServer::get_singleton()->get_rendering_device();
   if (!rd) {
@@ -158,6 +175,8 @@ void SpoutInput::_release_texture() {
 }
 
 void SpoutInput::_receive_texture() {
+  SPOUT_TRACY_ZONE("SpoutInput::_receive_texture");
+  SPOUT_TRACY_THREAD_NAME("Godot render thread (frame_pre_draw)");
 
   if (_texture.is_null()) {
     return;
@@ -170,13 +189,28 @@ void SpoutInput::_receive_texture() {
   }
 
   auto channel = _channel_name.utf8();
-  if (!_backend->update_receiver(channel.get_data())) {
+  SPOUT_TRACY_TEXT(channel.get_data(), channel.length());
+  bool updated = false;
+  {
+    SPOUT_TRACY_ZONE("SpoutInput::update_receiver");
+    updated = _backend->update_receiver(channel.get_data());
+    if (updated) {
+      SPOUT_TRACY_TEXT("success", 7);
+    } else {
+      SPOUT_TRACY_TEXT("failure", 7);
+    }
+  }
+  if (!updated) {
+    SPOUT_TRACY_EVENT("SpoutInput/update_receiver_failures",
+                      update_receiver_failures);
     _release_receiver();
     return;
   }
 
   auto width = _backend->get_sender_width();
   auto height = _backend->get_sender_height();
+  SPOUT_TRACY_VALUE(width);
+  SPOUT_TRACY_VALUE(height);
   if (width == 0 || height == 0) {
     return;
   }
@@ -189,7 +223,18 @@ void SpoutInput::_receive_texture() {
     }
   }
 
-  if (!_backend->receive(_rd_texture, width, height, channel.get_data())) {
+  bool received = false;
+  {
+    SPOUT_TRACY_ZONE("SpoutInput::receive");
+    received = _backend->receive(_rd_texture, width, height, channel.get_data());
+    if (received) {
+      SPOUT_TRACY_TEXT("success", 7);
+    } else {
+      SPOUT_TRACY_TEXT("failure", 7);
+    }
+  }
+  if (!received) {
+    SPOUT_TRACY_EVENT("SpoutInput/receive_failures", receive_failures);
     _release_receiver();
   }
 }

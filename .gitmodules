@@ -1,9 +1,6 @@
 [submodule "lib/godot-cpp"]
 	path = lib/godot-cpp
 	url = https://github.com/GodotNativeTools/godot-cpp.git
-[submodule "lib/Spout2"]
-	path = lib/Spout2
-	url = https://github.com/leadedge/Spout2.git
-[submodule "lib/SpoutVulkan"]
-	path = lib/SpoutVulkan
-	url = https://github.com/leadedge/SpoutVulkan.git
+[submodule "lib/rotten-SpoutVulkan"]
+	path = lib/rotten-SpoutVulkan
+	url = https://github.com/RottenC/rotten-SpoutVulkan

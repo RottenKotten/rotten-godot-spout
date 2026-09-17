@@ -54,6 +54,7 @@ private:
   VkQueue _queue = VK_NULL_HANDLE;
   uint32_t _queue_family_index = 0;
   VkCommandPool _command_pool = VK_NULL_HANDLE;
+  bool _receiver_bound = false;
 };
 
 } // namespace godot
